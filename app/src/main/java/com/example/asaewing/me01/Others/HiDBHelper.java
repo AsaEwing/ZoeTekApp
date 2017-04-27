@@ -19,6 +19,8 @@ public class HiDBHelper extends SQLiteOpenHelper{
     //HiApp Info
     public final static String TABLE_NAME_Hi = "Hi_table";
     public final static String KEY_Hi_Index = "Hi_index";
+    public final static String KEY_Height = "Con_Height";
+    public final static String KEY_Weight = "Con_Weight";
     public final static String KEY_Con_A_SBP = "Con_A_SBP";
     public final static String KEY_Con_B_SBP = "Con_B_SBP";
     public final static String KEY_Con_A_DBP = "Con_A_DBP";
@@ -30,6 +32,8 @@ public class HiDBHelper extends SQLiteOpenHelper{
     private String CREATE_TABLE_Hi =
             "CREATE TABLE IF NOT EXISTS "+TABLE_NAME_Hi+"("+
                     KEY_Hi_Index+" INTEGER PRIMARY KEY AUTOINCREMENT,"+
+                    KEY_Height+" TEXT,"+
+                    KEY_Weight+" TEXT,"+
                     KEY_Con_A_SBP+" TEXT,"+
                     KEY_Con_B_SBP+" TEXT,"+
                     KEY_Con_A_DBP+" TEXT,"+

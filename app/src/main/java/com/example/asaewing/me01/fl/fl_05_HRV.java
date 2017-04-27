@@ -35,9 +35,6 @@ import com.example.asaewing.me01.R;
 
 import java.util.ArrayList;
 
-/**
- * Created by asaewing on 2017/4/20.
- */
 
 public class fl_05_HRV extends RootFragment implements View.OnClickListener {
 
@@ -48,6 +45,23 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
     //宣告心率變異性相關變數
     private int E_HR,P_HR,E_Stress,P_Stress;
     private double E_SDNN,P_SDNN,E_LF_HF,P_LF_HF,RMSSD;
+
+    double BP = 0;      //血壓
+    double SBP = 0;     //收縮壓131
+    double DBP = 0;     //舒張壓68
+
+    double setSBP = 0;
+    double setDBP = 0;
+
+    double HB = 0;      //心跳78
+    double Height = 1.77;
+    double Weight = 52.5;
+    double A_SBP = 0;
+    double B_SBP = 0;
+    double A_DBP = 0;
+    double B_DBP = 0;
+    double Con_q = 0;
+    double Con_h = 0;
 
     //關閉掃描時間處理
     private Handler mHandler;
@@ -68,7 +82,7 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
     //掃描狀態文字顯示
     private TextView tv_scan;
     //藍牙掃描彈出視窗
-    private AlertDialog showList;
+    //private AlertDialog showList;
     //已選擇的裝置名稱
     private String ble_device_name = "";
     //已選擇的裝置MAC位址
@@ -100,27 +114,17 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
     }
 
     //TODO----Data----
-
-    /*private void setValue(){
+    private void getBP_Value(){
         Con_h = 0.2;
+        setConValue();
 
-        double tmp = 0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT)+9.8*Con_h;
+        double tmp = 1/PTT/PTT;
 
-        double Con_q_SBP = setSBP/tmp;
-        A_SBP = Con_q_SBP*0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT);
-        B_SBP = Con_q_SBP*9.8*Con_h;
-
-        double Con_q_DBP = setDBP/tmp;
-        A_DBP = Con_q_DBP*0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT);
-        B_DBP = Con_q_DBP*9.8*Con_h;
-
-
-        SBP = A_SBP/PTT/PTT+B_SBP;
-        DBP = A_DBP/PTT/PTT+B_DBP;
+        SBP = A_SBP*tmp+B_SBP;
+        DBP = A_DBP*tmp+B_DBP;
     }
 
     private void setConValue(){
-
         Con_h = 0.2;
 
         double tmp = 0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT)+9.8*Con_h;
@@ -132,11 +136,7 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
         double Con_q_DBP = setDBP/tmp;
         A_DBP = Con_q_DBP*0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT);
         B_DBP = Con_q_DBP*9.8*Con_h;
-
-
-        SBP = A_SBP/PTT/PTT+B_SBP;
-        DBP = A_DBP/PTT/PTT+B_DBP;
-    }*/
+    }
 
 
     //TODO----生命週期----
@@ -178,6 +178,205 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
 
         //初始化文字框
         hello_tv = (TextView)rootView.findViewById(R.id.tv_helloworld);
+
+
+        btn_connect = (Button)rootView.findViewById(R.id.btn_connect);
+        btn_connect.setOnClickListener(this);
+
+        btn_send = (Button)rootView.findViewById(R.id.btn_send);
+        btn_send.setOnClickListener(this);
+
+        //綁定服務
+        doBindService();
+        receiver = new MyReceiver();
+        filter = new IntentFilter();
+        filter.addAction(MY_BROADCAST_TAG);
+
+        Button bt_setting = (Button)rootView.findViewById(R.id.btn_setting_bp);
+        assert bt_setting != null;
+        bt_setting.setOnClickListener(this);
+
+        A_SBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_A_SBP);
+        B_SBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_B_SBP);
+        A_DBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_A_DBP);
+        B_DBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_B_DBP);
+
+        Height = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Height);
+        Weight = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Weight);
+
+        return rootView;
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        //判斷是否選擇開啟藍牙，選擇否則關閉程式
+        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
+            getActivity().finish();
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        //詢問是否開啟藍牙功能
+        if (!mBluetoothAdapter.isEnabled()) {
+            if (!mBluetoothAdapter.isEnabled()) {
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            }
+        }
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(receiver, filter);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if(mLeDeviceListAdapter!=null) {
+            scanLeDevice(false);
+            mLeDeviceListAdapter.clear();
+        }
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(receiver);
+    }
+
+    @Override
+    public void onStop() {
+        getMainActivity().getDataManager().saveDataBP(A_SBP,B_SBP,A_DBP,B_DBP);
+        getMainActivity().getDataManager().saveDataNormal(Height,Weight);
+        super.onStop();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        //斷開BLE連線
+        bleService.disconnect();
+        //斷開綁定BLE服務
+        getActivity().unbindService(serviceConnection);
+    }
+
+    private void showBleScanDialog(){
+        mLeDeviceListAdapter = new LeDeviceListAdapter();
+        mHandler = new Handler();
+
+        //清除BLE列表
+        mLeDeviceListAdapter.clear();
+        //開始BLE掃描
+        scanLeDevice(true);
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        AlertDialog alertDialog = null;
+        builder.setTitle("請選擇BLE裝置");
+        builder.setView(R.layout.list_device);
+
+        alertDialog = builder.create();
+        assert alertDialog != null;
+        final AlertDialog finalAlertDialog = alertDialog;
+
+        alertDialog.show();
+
+
+        //mLeDeviceListAdapter = new LeDeviceListAdapter();
+        //mHandler = new Handler();
+
+        listBLEDevice = (ListView) alertDialog.findViewById(R.id.listBLEDevice);
+        //將BLE列表連結到BLE列表接口
+        assert listBLEDevice != null;
+        listBLEDevice.setAdapter(mLeDeviceListAdapter);
+        //設定BLE列表點擊後要處理的工作
+
+        listBLEDevice.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
+                //判斷使否還在掃描，如果還在掃描則取消掃描
+                mHandler.removeCallbacksAndMessages(null);
+                if(mScanning) scanLeDevice(false);
+                //取消列表顯示
+                finalAlertDialog.cancel();
+                //顯示處理狀態
+                pd = ProgressDialog.show(getActivity(), "", "裝置連線中");
+                //取得已選擇裝置的相關資訊
+                final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
+
+                //儲存選擇的裝置名稱與MAC位址
+                ble_device_name = device.getName();
+                ble_device_address = device.getAddress();
+
+                //顯示選擇的裝置
+                Toast.makeText(getActivity(),device.getName() + " " + device.getAddress(),Toast.LENGTH_LONG).show();
+
+                //關閉顯示處理狀態
+                //pd.dismiss();
+
+                //連線至所選的BLE裝置
+                bleService.connect(device);
+            }
+        });
+        //取得掃描狀態TextView的Layout
+        tv_scan = (TextView) alertDialog.findViewById(R.id.tv_scan);
+
+        //設定BLE掃描狀態
+        assert tv_scan != null;
+        tv_scan.setText("中止掃描");
+        //設定點擊後要處理的工作
+        tv_scan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView tv = (TextView)v;
+                if(tv.getText().toString().equals("重新掃描裝置")){
+                    tv_scan.setText("中止掃描");
+                    //清除BLE裝置列表
+                    mLeDeviceListAdapter.clear();
+                    //更新BLE列表顯示
+                    mLeDeviceListAdapter.notifyDataSetChanged();
+                    //掃描BLE裝置
+                    scanLeDevice(true);
+                } else {
+                    tv_scan.setText("重新掃描裝置");
+                    //中止掃描BLE裝置
+                    scanLeDevice(false);
+                }
+            }
+        });
+
+        alertDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialogInterface) {
+                //判斷使否還在掃描，如果還在掃描則取消掃描
+                mHandler.removeCallbacksAndMessages(null);
+                if(mScanning) scanLeDevice(false);
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (pd != null) pd.dismiss();
+                    }
+                },3000);
+            }
+        });
+
+////////////////////////////////////////////////////////////////
+        /*
         //取得BLE掃描視窗Layout
         scanView = getActivity().getLayoutInflater().inflate(R.layout.list_device, null);
         //BLE列表接口初始化
@@ -238,7 +437,8 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
             }
         });
         //初始化BLE列表顯示Layout
-        showList = new AlertDialog.Builder(getActivity()).setTitle("請選擇BLE裝置").setView(scanView).create();
+        showList = new AlertDialog.Builder(
+                getActivity()).setTitle("請選擇BLE裝置").setView(scanView).create();
         //設定關閉BLE掃描視窗後的工作
         showList.setOnCancelListener(new DialogInterface.OnCancelListener() {
             @Override
@@ -255,130 +455,54 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
             }
         });
 
-        //初始化連線按鈕
-        btn_connect = (Button)rootView.findViewById(R.id.btn_connect);
-        //設定點擊按鈕後的工作
-        btn_connect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //清除BLE列表
-                mLeDeviceListAdapter.clear();
-                //開始BLE掃描
-                scanLeDevice(true);
-                //設定BLE掃描狀態
-                tv_scan.setText("中止掃描");
-                //顯示BLE掃描視窗
-                showList.show();
-            }
-        });
-        btn_send = (Button)rootView.findViewById(R.id.btn_send);
-        btn_send.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(btn_send.getText().toString().equals("發送")) {
-                    //發送menu.bp,指令
-                    bleService.sendData("menu.bp,");
-                    //修改顯示文字為「開始量測」
-                    btn_send.setText("開始量測");
-                } else {
-                    if(btn_send.getText().toString().equals("停止量測")) {
-                        //發送menu.bp,指令
-                        bleService.sendData("menu.bp,");
-                        //修改顯示文字為「開始量測」
-                        btn_send.setText("開始量測");
-                    } else {
-                        //發送icon.bp,指令
-                        bleService.sendData("icon.bp,");
-                        //修改顯示文字為「停止量測」
-                        btn_send.setText("停止量測");
+        showList.show();*/
+    }
+
+    private void showSetBpDialog(){
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        AlertDialog alertDialog = null;
+        builder.setTitle("設定數值");
+        builder.setView(R.layout.dialog_setting);
+
+        builder.setPositiveButton("OK"
+                ,new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        EditText ed_height = (EditText)((AlertDialog)dialog).findViewById(R.id.edit_Height);
+                        EditText ed_SBP = (EditText)((AlertDialog)dialog).findViewById(R.id.edit_SBP);
+                        EditText ed_DBP = (EditText)((AlertDialog)dialog).findViewById(R.id.edit_DBP);
+
+                        assert ed_height != null;
+                        if (ed_height.getText()!=null) {
+                            Height = Double.valueOf(String.valueOf(ed_height.getText()));
+                        }
+                        Height = Height/100;
+                        assert ed_SBP != null;
+                        if (ed_SBP.getText()!=null) {
+                            setSBP = Double.valueOf(String.valueOf(ed_SBP.getText()));
+                        }
+                        assert ed_DBP != null;
+                        if (ed_DBP.getText()!=null) {
+                            setDBP = Double.valueOf(String.valueOf(ed_DBP.getText()));
+                        }
+
+                        setConValue();
                     }
-                }
-            }
-        });
-        //綁定服務
-        doBindService();
-        receiver = new MyReceiver();
-        filter = new IntentFilter();
-        filter.addAction(MY_BROADCAST_TAG);
+                });
 
-        Button bt_setting = (Button)rootView.findViewById(R.id.btn_setting);
-        assert bt_setting != null;
-        bt_setting.setOnClickListener(this);
+        builder.setNegativeButton("Cancel"
+                ,new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //setBMI();
+                        //MainActivity.fabMainClose();
+                    }
+                });
 
-        /*A_SBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_A_SBP);
-        B_SBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_B_SBP);
-        A_DBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_A_DBP);
-        B_DBP = getMainActivity().getDataManager().mInfoMap.IMgetFloat(HiDBHelper.KEY_Con_B_DBP);*/
-
-        return rootView;
-    }
-
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        //判斷是否選擇開啟藍牙，選擇否則關閉程式
-        if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
-            getActivity().finish();
-            return;
-        }
-        super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        //詢問是否開啟藍牙功能
-        if (!mBluetoothAdapter.isEnabled()) {
-            if (!mBluetoothAdapter.isEnabled()) {
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            }
-        }
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(receiver, filter);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if(mLeDeviceListAdapter!=null) {
-            scanLeDevice(false);
-            mLeDeviceListAdapter.clear();
-        }
-        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(receiver);
-    }
-
-    @Override
-    public void onStop() {
-        //getMainActivity().getDataManager().saveDataBP(A_SBP,B_SBP,A_DBP,B_DBP);
-        super.onStop();
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        //斷開BLE連線
-        bleService.disconnect();
-        //斷開綁定BLE服務
-        getActivity().unbindService(serviceConnection);
+        alertDialog = builder.create();
+        assert alertDialog != null;
+        alertDialog.show();
+        alertDialog.setCancelable(false);
     }
 
     //掃描BLE方法
@@ -403,11 +527,13 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
             tv_scan.setText("重新掃描裝置");
         }
     }
+
     //綁定BLE服務
     private void doBindService(){
         Intent intent = new Intent(getActivity(), BLEService.class);
         getActivity().bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
+
     //BLE服務連接
     private ServiceConnection serviceConnection=new ServiceConnection() {
         @Override
@@ -424,50 +550,36 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
     public void onClick(View view) {
         int id = view.getId();
         switch (id){
-            case R.id.btn_setting:
-                final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                AlertDialog alertDialog = null;
-                builder.setTitle("設定數值");
-                builder.setView(R.layout.dialog_setting);
+            case R.id.btn_setting_bp:
+                showSetBpDialog();
+                break;
 
-                builder.setPositiveButton("OK"
-                        ,new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                EditText ed_height = (EditText)((AlertDialog)dialog).findViewById(R.id.edit_Height);
-                                EditText ed_SBP = (EditText)((AlertDialog)dialog).findViewById(R.id.edit_SBP);
-                                EditText ed_DBP = (EditText)((AlertDialog)dialog).findViewById(R.id.edit_DBP);
+            case R.id.btn_connect:
 
-                                /*assert ed_height != null;
-                                if (ed_height.getText()!=null) {
-                                    Height = Double.valueOf(String.valueOf(ed_height.getText()));
-                                }
-                                Height = Height/100;
-                                assert ed_SBP != null;
-                                if (ed_SBP.getText()!=null) {
-                                    setSBP = Double.valueOf(String.valueOf(ed_SBP.getText()));
-                                }
-                                assert ed_DBP != null;
-                                if (ed_DBP.getText()!=null) {
-                                    setDBP = Double.valueOf(String.valueOf(ed_DBP.getText()));
-                                }*/
 
-                            }
-                        });
+                showBleScanDialog();
 
-                builder.setNegativeButton("Cancel"
-                        ,new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                //setBMI();
-                                //MainActivity.fabMainClose();
-                            }
-                        });
+                break;
 
-                alertDialog = builder.create();
-                assert alertDialog != null;
-                alertDialog.show();
-                alertDialog.setCancelable(false);
+            case R.id.btn_send:
+                if(btn_send.getText().toString().equals("發送")) {
+                    //發送menu.bp,指令
+                    bleService.sendData("menu.bp,");
+                    //修改顯示文字為「開始量測」
+                    btn_send.setText("開始量測");
+                } else {
+                    if(btn_send.getText().toString().equals("停止量測")) {
+                        //發送menu.bp,指令
+                        bleService.sendData("menu.bp,");
+                        //修改顯示文字為「開始量測」
+                        btn_send.setText("開始量測");
+                    } else {
+                        //發送icon.bp,指令
+                        bleService.sendData("icon.bp,");
+                        //修改顯示文字為「停止量測」
+                        btn_send.setText("停止量測");
+                    }
+                }
                 break;
         }
     }
@@ -622,16 +734,28 @@ public class fl_05_HRV extends RootFragment implements View.OnClickListener {
                             RMSSD = Double.valueOf(arg1.getStringExtra("Receiver").split("=|,")[1]);
                             break;
                     }
+
+                    getBP_Value();
+
                     //透過HelloWorld的文字框來顯示接收到的資料
-                    hello_tv.setText("E_HR=" + String.valueOf(E_HR) + "\n" +
-                            "E_SDNN=" + String.valueOf(E_SDNN) + "\n" +
-                            "E_LF/HF=" + String.valueOf(E_LF_HF) + "\n" +
-                            "E_Stress=" + String.valueOf(E_Stress) + "\n" +
-                            "P_HR=" + String.valueOf(P_HR) + "\n" +
-                            "P_SDNN=" + String.valueOf(P_SDNN) + "\n" +
-                            "P_LF/HF=" + String.valueOf(P_LF_HF) + "\n" +
-                            "P_Stress=" + String.valueOf(P_Stress) + "\n" +
-                            "RMSSD=" + String.valueOf(RMSSD));
+                    String tmp;
+                    tmp = "E_HR="+String.valueOf(E_HR)+"\n";    //
+                    tmp += "PTT="+String.valueOf(PTT)+"\n";     //脈搏傳輸時間
+                    tmp += "ET="+String.valueOf(ET)+"\n";       //
+                    tmp += "SLP="+String.valueOf(SLP)+"\n";     //
+                    tmp += "\n";
+                    tmp += "SBP="+String.valueOf(SBP)+"\n";       //
+                    tmp += "DBP="+String.valueOf(DBP)+"\n";     //
+                    tmp += "\n";
+                    tmp +="E_SDNN="+String.valueOf(E_SDNN)+"\n";
+                    tmp +="E_LF/HF="+String.valueOf(E_LF_HF)+"\n";
+                    tmp +="E_Stress="+String.valueOf(E_Stress)+"\n";
+                    tmp +="P_HR="+String.valueOf(P_HR)+"\n";
+                    tmp +="P_SDNN="+String.valueOf(P_SDNN)+"\n";
+                    tmp +="P_LF/HF="+String.valueOf(P_LF_HF)+"\n";
+                    tmp +="P_Stress="+String.valueOf(P_Stress)+"\n";
+                    tmp +="RMSSD="+String.valueOf(RMSSD)+"\n";
+                    hello_tv.setText(tmp);
                 }
             }
         }

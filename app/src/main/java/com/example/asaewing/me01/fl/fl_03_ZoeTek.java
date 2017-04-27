@@ -109,27 +109,16 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
     }
 
     //TODO----Data----
-
-    private void setValue(){
+    private void getBP_Value(){
         Con_h = 0.2;
 
-        double tmp = 0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT)+9.8*Con_h;
+        double tmp = 1/PTT/PTT;
 
-        double Con_q_SBP = setSBP/tmp;
-        A_SBP = Con_q_SBP*0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT);
-        B_SBP = Con_q_SBP*9.8*Con_h;
-
-        double Con_q_DBP = setDBP/tmp;
-        A_DBP = Con_q_DBP*0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT);
-        B_DBP = Con_q_DBP*9.8*Con_h;
-
-
-        SBP = A_SBP/PTT/PTT+B_SBP;
-        DBP = A_DBP/PTT/PTT+B_DBP;
+        SBP = A_SBP*tmp+B_SBP;
+        DBP = A_DBP*tmp+B_DBP;
     }
 
     private void setConValue(){
-
         Con_h = 0.2;
 
         double tmp = 0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT)+9.8*Con_h;
@@ -141,10 +130,6 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
         double Con_q_DBP = setDBP/tmp;
         A_DBP = Con_q_DBP*0.18/0.7*Math.sqrt(Height)/Math.sqrt(PTT);
         B_DBP = Con_q_DBP*9.8*Con_h;
-
-
-        SBP = A_SBP/PTT/PTT+B_SBP;
-        DBP = A_DBP/PTT/PTT+B_DBP;
     }
 
 
@@ -310,7 +295,7 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
         filter = new IntentFilter();
         filter.addAction(MY_BROADCAST_TAG);
 
-        Button bt_setting = (Button)rootView.findViewById(R.id.btn_setting);
+        Button bt_setting = (Button)rootView.findViewById(R.id.btn_setting_bp);
         assert bt_setting != null;
         bt_setting.setOnClickListener(this);
 
@@ -433,7 +418,7 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
     public void onClick(View view) {
         int id = view.getId();
         switch (id){
-            case R.id.btn_setting:
+            case R.id.btn_setting_bp:
                 final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                 AlertDialog alertDialog = null;
                 builder.setTitle("設定數值");
@@ -460,6 +445,8 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
                                 if (ed_DBP.getText()!=null) {
                                     setDBP = Double.valueOf(String.valueOf(ed_DBP.getText()));
                                 }
+
+                                setConValue();
 
                             }
                         });
@@ -607,6 +594,8 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
                         break;
                 }
 
+                getBP_Value();
+
                 //透過HelloWorld的文字框來顯示接收到的資料
                 String tmp;
                 tmp = "E_HR="+String.valueOf(E_HR)+"\n";    //
@@ -616,9 +605,6 @@ public class fl_03_ZoeTek extends RootFragment implements View.OnClickListener{
                 tmp += "\n";
                 tmp += "SBP="+String.valueOf(SBP)+"\n";       //
                 tmp += "DBP="+String.valueOf(DBP)+"\n";     //
-
-                setValue();
-
 
                 hello_tv.setText(tmp);
             }

@@ -52,7 +52,13 @@ public class DataManager implements Parcelable {
                 Log.d(mTAG,"**InfoMap**"+cursorAll.getCount());
                 if (CA_Count[0] >0) {
                     cursorAll.moveToFirst();
-                    //Int
+                    tmpDouble = Double.parseDouble(
+                            cursorAll.getString(cursorAll.getColumnIndex(HiDBHelper.KEY_Height)));
+                    mInfoMap.IMput(HiDBHelper.KEY_Height, tmpDouble);
+                    tmpDouble = Double.parseDouble(
+                            cursorAll.getString(cursorAll.getColumnIndex(HiDBHelper.KEY_Weight)));
+                    mInfoMap.IMput(HiDBHelper.KEY_Weight, tmpDouble);
+
                     mInfoMap.IMput(HiDBHelper.KEY_Hi_Index
                             , cursorAll.getInt(cursorAll.getColumnIndex(HiDBHelper.KEY_Hi_Index)));
                     tmpDouble = Double.parseDouble(
@@ -71,6 +77,8 @@ public class DataManager implements Parcelable {
 
                 } else {
                     mInfoMap.IMput(HiDBHelper.KEY_Hi_Index, 1);
+                    mInfoMap.IMput(HiDBHelper.KEY_Height, 1.77);
+                    mInfoMap.IMput(HiDBHelper.KEY_Weight, 53);
                     mInfoMap.IMput(HiDBHelper.KEY_Con_A_SBP, 0);
                     mInfoMap.IMput(HiDBHelper.KEY_Con_B_SBP, 0);
                     mInfoMap.IMput(HiDBHelper.KEY_Con_A_DBP, 0);
@@ -78,6 +86,8 @@ public class DataManager implements Parcelable {
 
                     ContentValues values = new ContentValues();
                     values.put(HiDBHelper.KEY_Hi_Index, 1);
+                    values.put(HiDBHelper.KEY_Height, 0);
+                    values.put(HiDBHelper.KEY_Weight, 0);
                     values.put(HiDBHelper.KEY_Con_A_SBP, 0);
                     values.put(HiDBHelper.KEY_Con_B_SBP, 0);
                     values.put(HiDBHelper.KEY_Con_A_DBP, 0);
@@ -112,6 +122,8 @@ public class DataManager implements Parcelable {
             public void run() {
 
                 ContentValues values = new ContentValues();
+                values.put(HiDBHelper.KEY_Height,mInfoMap.IMgetBoolean(HiDBHelper.KEY_Height));
+                values.put(HiDBHelper.KEY_Weight,mInfoMap.IMgetBoolean(HiDBHelper.KEY_Weight));
                 values.put(HiDBHelper.KEY_Con_A_SBP,mInfoMap.IMgetBoolean(HiDBHelper.KEY_Con_A_SBP));
                 values.put(HiDBHelper.KEY_Con_B_SBP,mInfoMap.IMgetBoolean(HiDBHelper.KEY_Con_B_SBP));
                 values.put(HiDBHelper.KEY_Con_A_DBP,mInfoMap.IMgetBoolean(HiDBHelper.KEY_Con_A_DBP));
@@ -156,6 +168,11 @@ public class DataManager implements Parcelable {
         mInfoMap.IMput(HiDBHelper.KEY_Con_B_SBP, SBP_B);
         mInfoMap.IMput(HiDBHelper.KEY_Con_A_DBP, DBP_A);
         mInfoMap.IMput(HiDBHelper.KEY_Con_B_DBP, DBP_B);
+    }
+
+    public void saveDataNormal(double height,double weight){
+        mInfoMap.IMput(HiDBHelper.KEY_Height, height);
+        mInfoMap.IMput(HiDBHelper.KEY_Weight, weight);
     }
 
     public static final Creator<DataManager> CREATOR

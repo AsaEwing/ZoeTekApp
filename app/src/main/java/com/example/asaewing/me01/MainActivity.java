@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.ActionBar;
 import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -21,6 +23,7 @@ import com.example.asaewing.me01.Others.HiDBHelper;
 import com.example.asaewing.me01.fl.fl_01_scan;
 import com.example.asaewing.me01.fl.fl_02_data;
 import com.example.asaewing.me01.fl.fl_03_ZoeTek;
+import com.example.asaewing.me01.fl.fl_05_HRV;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -61,8 +64,15 @@ public class MainActivity extends AppCompatActivity
         assert Fragment_RL != null;
         Fragment_RL.setVisibility(View.VISIBLE);
 
+        String sTag = "fl_05_HRV";
+        Fragment fragment = fl_05_HRV.newInstance();
+
         getSupportFragmentManager().beginTransaction()
-                .add(R.id.fl_c_MainFragment, fl_01_scan.newInstance(), "nav_01").commit();
+                .add(R.id.fl_c_MainFragment, fragment, sTag).commit();
+
+        ActionBar supportActionBar = getSupportActionBar();
+        assert supportActionBar != null;
+        supportActionBar.setTitle(sTag);
 
         dataManager = new DataManager(this,mTAG);
     }
@@ -119,20 +129,19 @@ public class MainActivity extends AppCompatActivity
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
+        String sTag = null;
 
         if (id == R.id.nav_01) {
-            // Handle the camera action
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fl_c_MainFragment, fl_01_scan.newInstance(), "nav_01").commit();
+            sTag = "fl_01_scan";
+
         } else if (id == R.id.nav_02) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fl_c_MainFragment, fl_02_data.newInstance(), "nav_02").commit();
+            sTag = "fl_02_data";
 
         } else if (id == R.id.nav_03) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fl_c_MainFragment, fl_03_ZoeTek.newInstance(), "nav_02").commit();
+            sTag = "fl_03_ZoeTek";
 
         } else if (id == R.id.nav_04) {
+            sTag = "fl_05_HRV";
 
         } else if (id == R.id.nav_05) {
 
@@ -140,9 +149,41 @@ public class MainActivity extends AppCompatActivity
 
         }
 
+        setFragment(sTag);
+
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void setFragment(String sTag){
+        Fragment fragment = null;
+        if (sTag == null) return;
+
+        switch (sTag){
+            case "fl_01_scan":
+                fragment = fl_01_scan.newInstance();
+                break;
+            case "fl_02_data":
+                fragment = fl_02_data.newInstance();
+                break;
+            case "fl_03_ZoeTek":
+                fragment = fl_03_ZoeTek.newInstance();
+                break;
+            case "fl_05_HRV":
+                fragment = fl_05_HRV.newInstance();
+                break;
+        }
+
+        if (fragment == null) return;
+
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fl_c_MainFragment, fragment, sTag).commit();
+
+        ActionBar supportActionBar = getSupportActionBar();
+        assert supportActionBar != null;
+        supportActionBar.setTitle(sTag);
+
     }
 
     public DataManager getDataManager(){
